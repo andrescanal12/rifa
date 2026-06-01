@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gran Rifa 500€ | Gestor de Boletos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fff5f7;
+            background-image: url('https://www.transparenttextures.com/patterns/floral-paper.png');
+            min-height: 100vh;
+        }
+        .ticket-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+        }
+        .ticket-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            border: 2px solid #fce4ec;
+            color: #d81b60;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .ticket-cell:hover { transform: scale(1.1); z-index: 10; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .ticket-sold { background-color: #f06292; color: white; border-color: #f06292; }
+        .ticket-paid { background-color: #c2185b; color: white; border-color: #c2185b; }
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal.active { display: flex; }
+    </style>
+</head>
+<body>
+    <div class="max-w-4xl mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-black text-pink-700 mb-2">Gran Rifa 500€</h1>
+            <p class="text-pink-500 font-bold tracking-wide uppercase text-sm">Gestor Administrativo de Boletos</p>
+        </header>
+
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-pink-400 text-center">
+                <i class="fas fa-users text-pink-500 mb-1"></i>
+                <div class="text-[10px] text-gray-400 font-black uppercase">Vendidos</div>
+                <div id="count-sold" class="text-2xl font-black text-pink-700">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-green-400 text-center">
+                <i class="fas fa-wallet text-green-500 mb-1"></i>
+                <div class="text-[10px] text-gray-400 font-black uppercase">Cobrado</div>
+                <div id="count-paid" class="text-2xl font-black text-green-700">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border-b-4 border-orange-400 text-center">
+                <i class="fas fa-dollar-sign text-orange-500 mb-1"></i>
+                <div class="text-[10px] text-gray-400 font-black uppercase">Pendiente</div>
+                <div id="count-pending" class="text-2xl font-black text-orange-700">0</div>
+            </div>
+        </div>
+
+        <!-- Controles -->
+        <div class="flex justify-center gap-2 mb-8">
+            <button onclick="setView('grid')" id="btn-grid" class="px-6 py-2 rounded-full font-black text-sm transition bg-pink-600 text-white shadow-lg">
+                <i class="fas fa-th-large mr-2"></i> MODO PÓSTER
+            </button>
+            <button onclick="setView('list')" id="btn-list" class="px-6 py-2 rounded-full font-black text-sm transition bg-white text-pink-600">
+                <i class="fas fa-list mr-2"></i> MODO LISTA
+            </button>
+        </div>
+
+        <!-- Grid -->
+        <div id="grid-container" class="bg-white/80 backdrop-blur-md p-6 rounded-[2rem] shadow-2xl">
+            <div id="ticket-grid" class="ticket-grid"></div>
+            <div id="ticket-list" class="hidden overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-pink-700 border-b-2 border-pink-50">
+                            <th class="p-3">Nº</th>
+                            <th class="p-3">Nombre</th>
+                            <th class="p-3">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="list-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl m-4">
+            <h2 class="text-2xl font-black text-pink-700 mb-6">Boleto #<span id="modal-num">00</span></h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-1 ml-1">Nombre del Comprador</label>
+                    <input type="text" id="input-name" class="w-full px-4 py-3 rounded-xl border-2 border-pink-50 focus:border-pink-500 outline-none transition font-bold" placeholder="Ej: Juan Pérez">
+                </div>
+                <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-pink-50 cursor-pointer hover:bg-pink-50 transition">
+                    <input type="checkbox" id="input-paid" class="w-5 h-5 accent-pink-600">
+                    <span class="font-black text-gray-600">YA ESTÁ PAGADO</span>
+                </label>
+                <div class="flex gap-2 pt-4">
+                    <button onclick="closeModal()" class="flex-1 py-3 font-black text-gray-400">CANCELAR</button>
+                    <button onclick="saveTicket()" class="flex-1 py-3 bg-pink-600 text-white rounded-xl font-black shadow-lg shadow-pink-200">GUARDAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQhdBVPyMJwlj2eKSX83PP2pKIJr9gWqU",
+            authDomain: "gran-rifa-500.firebaseapp.com",
+            projectId: "gran-rifa-500",
+            storageBucket: "gran-rifa-500.firebasestorage.app",
+            messagingSenderId: "408417055109",
+            appId: "1:408417055109:web:775d73659f4f9e5daed4ec"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        let tickets = {};
+        let currentTicket = null;
+
+        // Cargar datos
+        onSnapshot(collection(db, "boletos"), (snapshot) => {
+            tickets = {};
+            snapshot.forEach(doc => { tickets[doc.id] = doc.data(); });
+            render();
+            updateStats();
+        });
+
+        function render() {
+            const grid = document.getElementById('ticket-grid');
+            const listBody = document.getElementById('list-body');
+            grid.innerHTML = '';
+            listBody.innerHTML = '';
+
+            for (let i = 0; i < 100; i++) {
+                const num = i.toString().padStart(2, '0');
+                const t = tickets[num];
+                
+                // Render Grid
+                const cell = document.createElement('div');
+                cell.className = `ticket-cell ${t ? (t.pagado ? 'ticket-paid' : 'ticket-sold') : ''}`;
+                cell.innerText = num;
+                cell.onclick = () => openModal(num);
+                grid.appendChild(cell);
+
+                // Render List if exists
+                if (t) {
+                    const row = document.createElement('tr');
+                    row.className = "border-b border-pink-50 cursor-pointer hover:bg-pink-50/50";
+                    row.onclick = () => openModal(num);
+                    row.innerHTML = `
+                        <td class="p-3 font-black text-pink-700">${num}</td>
+                        <td class="p-3 font-bold text-gray-600">${t.nombre}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded-md text-[10px] font-black ${t.pagado ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">
+                                ${t.pagado ? 'PAGADO' : 'PENDIENTE'}
+                            </span>
+                        </td>
+                    `;
+                    listBody.appendChild(row);
+                }
+            }
+        }
+
+        function updateStats() {
+            const sold = Object.keys(tickets).length;
+            const paid = Object.values(tickets).filter(t => t.pagado).length;
+            document.getElementById('count-sold').innerText = sold;
+            document.getElementById('count-paid').innerText = paid;
+            document.getElementById('count-pending').innerText = sold - paid;
+        }
+
+        window.openModal = (num) => {
+            currentTicket = num;
+            const t = tickets[num] || { nombre: '', pagado: false };
+            document.getElementById('modal-num').innerText = num;
+            document.getElementById('input-name').value = t.nombre;
+            document.getElementById('input-paid').checked = t.pagado;
+            document.getElementById('modal').classList.add('active');
+        };
+
+        window.closeModal = () => {
+            document.getElementById('modal').classList.remove('active');
+        };
+
+        window.saveTicket = async () => {
+            const nombre = document.getElementById('input-name').value;
+            const pagado = document.getElementById('input-paid').checked;
+            if (nombre.trim() === "") return;
+            
+            await setDoc(doc(db, "boletos", currentTicket), {
+                nombre, pagado, numero: currentTicket
+            });
+            closeModal();
+        };
+
+        window.setView = (view) => {
+            const grid = document.getElementById('ticket-grid');
+            const list = document.getElementById('ticket-list');
+            const btnGrid = document.getElementById('btn-grid');
+            const btnList = document.getElementById('btn-list');
+
+            if (view === 'grid') {
+                grid.classList.remove('hidden');
+                list.classList.add('hidden');
+                btnGrid.className = "px-6 py-2 rounded-full font-black text-sm transition bg-pink-600 text-white shadow-lg";
+                btnList.className = "px-6 py-2 rounded-full font-black text-sm transition bg-white text-pink-600";
+            } else {
+                grid.classList.add('hidden');
+                list.classList.remove('hidden');
+                btnList.className = "px-6 py-2 rounded-full font-black text-sm transition bg-pink-600 text-white shadow-lg";
+                btnGrid.className = "px-6 py-2 rounded-full font-black text-sm transition bg-white text-pink-600";
+            }
+        };
+    </script>
+</body>
+</html>

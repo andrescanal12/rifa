@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /boletos/{boletoId} {
+      allow read, write: if true;
+    }
+    match /boletos_colombia/{boletoId} {
+      allow read, write: if true;
+    }
+  }
+}
