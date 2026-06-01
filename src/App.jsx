@@ -25,6 +25,7 @@ export default function App() {
   const [buyerName, setBuyerName] = useState('')
   const [isPaid, setIsPaid] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('todos')
   const navigate = useNavigate()
 
   // ── Cargar datos en tiempo real desde Firestore ───────────────
@@ -378,61 +379,121 @@ export default function App() {
             </div>
           ) : (
             <>
-              {/* ── Buscador ── */}
-              <div style={{ marginBottom: 16, position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#999', display: 'flex', alignItems: 'center' }}>
-                  <Search size={18} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Buscar por comprador o número..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px 12px 44px',
-                    borderRadius: 14,
-                    border: '1.5px solid rgba(196,79,111,0.15)',
-                    fontSize: 14,
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-                    boxSizing: 'border-box',
-                    background: 'white',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = 'var(--pink-dark)'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(196,79,111,0.1)'
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor = 'rgba(196,79,111,0.15)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
+              {/* ── Buscador y Filtros ── */}
+              <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Input de búsqueda */}
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#999', display: 'flex', alignItems: 'center' }}>
+                    <Search size={18} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Buscar por comprador o número..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
                     style={{
-                      position: 'absolute',
-                      right: 16,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
+                      width: '100%',
+                      padding: '12px 16px 12px 44px',
+                      borderRadius: 14,
+                      border: '1.5px solid rgba(196,79,111,0.15)',
+                      fontSize: 14,
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                      boxSizing: 'border-box',
+                      background: 'white',
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.borderColor = 'var(--pink-dark)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(196,79,111,0.1)'
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.borderColor = 'rgba(196,79,111,0.15)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      style={{
+                        position: 'absolute',
+                        right: 16,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#999',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 0,
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtros de estado */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setStatusFilter('todos')}
+                    style={{
+                      background: statusFilter === 'todos' ? 'var(--pink-dark)' : 'white',
+                      color: statusFilter === 'todos' ? 'white' : '#666',
+                      border: statusFilter === 'todos' ? 'none' : '1px solid #ddd',
+                      borderRadius: 20,
+                      padding: '6px 14px',
+                      fontSize: 12,
+                      fontWeight: 600,
                       cursor: 'pointer',
-                      color: '#999',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: 0,
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    <X size={16} />
+                    Todos ({soldCount})
                   </button>
-                )}
+                  <button
+                    onClick={() => setStatusFilter('pagados')}
+                    style={{
+                      background: statusFilter === 'pagados' ? '#2e7d32' : 'white',
+                      color: statusFilter === 'pagados' ? 'white' : '#666',
+                      border: statusFilter === 'pagados' ? 'none' : '1px solid #ddd',
+                      borderRadius: 20,
+                      padding: '6px 14px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    Pagados ({paidCount})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('pendientes')}
+                    style={{
+                      background: statusFilter === 'pendientes' ? '#e65100' : 'white',
+                      color: statusFilter === 'pendientes' ? 'white' : '#666',
+                      border: statusFilter === 'pendientes' ? 'none' : '1px solid #ddd',
+                      borderRadius: 20,
+                      padding: '6px 14px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    Pendientes ({pendingCount})
+                  </button>
+                </div>
               </div>
 
               {(() => {
                 const filteredEntries = Object.entries(soldMap)
                   .filter(([num, data]) => {
+                    // Filtrar por estado de pago
+                    if (statusFilter === 'pagados' && !data.paid) return false
+                    if (statusFilter === 'pendientes' && data.paid) return false
+
+                    // Filtrar por término de búsqueda
                     const search = searchTerm.toLowerCase().trim()
                     if (!search) return true
                     const numStr = String(num).padStart(2, '0')
@@ -444,7 +505,7 @@ export default function App() {
                 if (filteredEntries.length === 0) {
                   return (
                     <div style={{ textAlign: 'center', padding: '32px 16px', color: '#aaa', background: 'white', borderRadius: 20, border: '1px solid rgba(196,79,111,0.1)' }}>
-                      <p style={{ fontSize: 14, fontWeight: 500 }}>No se encontraron resultados para "{searchTerm}"</p>
+                      <p style={{ fontSize: 14, fontWeight: 500 }}>No se encontraron resultados</p>
                     </div>
                   )
                 }
