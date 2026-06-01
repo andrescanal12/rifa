@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   Ticket, CalendarDays, DollarSign, User, Phone,
   CheckCircle2, XCircle, List, Camera, X, Check,
-  AlertCircle, Loader2, Share2
+  AlertCircle, Loader2, Share2, Search
 } from 'lucide-react'
 import { db } from './firebase'
 import {
@@ -24,6 +24,7 @@ export default function App() {
   const [modal, setModal] = useState(null)
   const [buyerName, setBuyerName] = useState('')
   const [isPaid, setIsPaid] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const navigate = useNavigate()
 
   // ── Cargar datos en tiempo real desde Firestore ───────────────
@@ -376,60 +377,134 @@ export default function App() {
               <p style={{ fontSize: 13, marginTop: 4 }}>Ve al Modo Póster y toca un número para registrar una venta</p>
             </div>
           ) : (
-            <div style={{ background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)', border: '1px solid rgba(196,79,111,0.1)' }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Nº</th>
-                    <th>Comprador</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(soldMap)
-                    .sort((a, b) => Number(a[0]) - Number(b[0]))
-                    .map(([num, data]) => (
-                      <tr key={num}>
-                        <td>
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 36,
-                            height: 36,
-                            background: 'linear-gradient(135deg, var(--pink-dark), var(--pink-darker))',
-                            color: 'white',
-                            borderRadius: 8,
-                            fontWeight: 700,
-                            fontSize: 14,
-                          }}>
-                            {String(num).padStart(2, '0')}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{data.buyer}</td>
-                        <td>
-                          {/* Toca para cambiar entre Pagado / Pendiente */}
-                          <button
-                            id={`estado-${String(num).padStart(2, '0')}`}
-                            onClick={() => setDoc(doc(db, BOLETOS_COL, String(num)), { ...data, paid: !data.paid })}
-                            title={data.paid ? 'Marcar como pendiente' : 'Marcar como pagado'}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                          >
-                            <span className={`badge-paid ${data.paid ? 'yes' : 'no'}`}
-                              style={{ userSelect: 'none', transition: 'all 0.2s ease' }}
-                            >
-                              {data.paid
-                                ? <><Check size={12} /> Pagado</>
-                                : <><AlertCircle size={12} /> Pendiente</>
-                              }
-                            </span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* ── Buscador ── */}
+              <div style={{ marginBottom: 16, position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#999', display: 'flex', alignItems: 'center' }}>
+                  <Search size={18} />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Buscar por comprador o número..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px 12px 44px',
+                    borderRadius: 14,
+                    border: '1.5px solid rgba(196,79,111,0.15)',
+                    fontSize: 14,
+                    outline: 'none',
+                    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                    boxSizing: 'border-box',
+                    background: 'white',
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = 'var(--pink-dark)'
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(196,79,111,0.1)'
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = 'rgba(196,79,111,0.15)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    style={{
+                      position: 'absolute',
+                      right: 16,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#999',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0,
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {(() => {
+                const filteredEntries = Object.entries(soldMap)
+                  .filter(([num, data]) => {
+                    const search = searchTerm.toLowerCase().trim()
+                    if (!search) return true
+                    const numStr = String(num).padStart(2, '0')
+                    const buyer = (data.buyer || '').toLowerCase()
+                    return numStr.includes(search) || buyer.includes(search)
+                  })
+                  .sort((a, b) => Number(a[0]) - Number(b[0]))
+
+                if (filteredEntries.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: '#aaa', background: 'white', borderRadius: 20, border: '1px solid rgba(196,79,111,0.1)' }}>
+                      <p style={{ fontSize: 14, fontWeight: 500 }}>No se encontraron resultados para "{searchTerm}"</p>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div style={{ background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)', border: '1px solid rgba(196,79,111,0.1)' }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Nº</th>
+                          <th>Comprador</th>
+                          <th>Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredEntries.map(([num, data]) => (
+                          <tr key={num}>
+                            <td>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 36,
+                                height: 36,
+                                background: 'linear-gradient(135deg, var(--pink-dark), var(--pink-darker))',
+                                color: 'white',
+                                borderRadius: 8,
+                                fontWeight: 700,
+                                fontSize: 14,
+                              }}>
+                                {String(num).padStart(2, '0')}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 600 }}>{data.buyer}</td>
+                            <td>
+                              {/* Toca para cambiar entre Pagado / Pendiente */}
+                              <button
+                                id={`estado-${String(num).padStart(2, '0')}`}
+                                onClick={() => setDoc(doc(db, BOLETOS_COL, String(num)), { ...data, paid: !data.paid })}
+                                title={data.paid ? 'Marcar como pendiente' : 'Marcar como pagado'}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                              >
+                                <span className={`badge-paid ${data.paid ? 'yes' : 'no'}`}
+                                  style={{ userSelect: 'none', transition: 'all 0.2s ease' }}
+                                >
+                                  {data.paid
+                                    ? <><Check size={12} /> Pagado</>
+                                    : <><AlertCircle size={12} /> Pendiente</>
+                                  }
+                                </span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
+            </>
           )}
         </div>
       )}
